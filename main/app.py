@@ -47,20 +47,12 @@ submit = tab1.button("submitbutton",type="primary")
 # tab2.table(df)
 
 if submit:
-# Using parameterized query to prevent SQL injection
-    query = """
-        INSERT INTO APPTBL (MaterialCode, ProjectCategory, SubCategory, ProjectDescription, AdditionalComment, NewPriceRequestedBySupplier)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    """
-
-    # Assuming you have a database cursor named cur
-    con.query(query, (materialcode, projectcategory, subcategory, projectdescription, comment, NewPriceRequestedbysupplier_basisforcostavoidance))
-
-    # Commit the changes to the database
-    con.commit()
+    with con.cursor() as cur:
+        cur.execute("INSERT INTO APPTBL(MaterialCode ,ProjectCategory, SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values"+f"({materialcode},'{projectcategory}','{subcategory}','{projectdescription}','{comment}',{NewPriceRequestedbysupplier_basisforcostavoidance})")
 
 # Fetch the data from the database table
-df = con.query("SELECT * FROM APPTBL", ttl=60)
+con = st.connection("snowflake")        
+df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
 tab2.table(df)
 
 # if submit:
