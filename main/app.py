@@ -7,7 +7,7 @@ st.title("PoCDataInput")
 
 tab1, tab2 = st.tabs(["Form", "DB Connection"])
 
-materialcode = tab1.number_input("MaterialCode")
+materialcode = tab1.text_input("MaterialCode")
 projectcategory = tab1.selectbox(
     'ProjectCategory',
     ("Select",)+('savings', 'costup', 'costavoidance','noinitiative'))
@@ -37,7 +37,7 @@ else:
     if len(projectdescription) <10:
         tab1.error("Please describe in detail")
 comment = tab1.text_area("Please provide additional comments if any")       
-NewPriceRequestedbysupplier_basisforcostavoidance = tab1.number_input("NewPriceRequestedBySupplier",min_value = 0,max_value=10000)
+NewPriceRequestedbysupplier_basisforcostavoidance = tab1.number_input("NewPriceRequestedBySupplier",min_value = 0.00,max_value=10000.00)
 
 submit = tab1.button("submitbutton",type="primary")
 
@@ -45,14 +45,16 @@ submit = tab1.button("submitbutton",type="primary")
 #     con.query(f"INSERT INTO APPTBL(MaterialCode ,ProjectCategory,SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values ({materialcode},{projectcategory},{subcategory},{projectdescription},{comment},{NewPriceRequestedbysupplier_basisforcostavoidance})")
 # df = con.query("select * from APPTBL", ttl=60)
 # tab2.table(df)
+df = pd.DataFrame({})
+df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
 
 if submit:
     with con.cursor() as cur:
         cur.execute("INSERT INTO APPTBL(MaterialCode ,ProjectCategory, SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values"+f"({materialcode},'{projectcategory}','{subcategory}','{projectdescription}','{comment}',{NewPriceRequestedbysupplier_basisforcostavoidance})")
-
+        df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
 # Fetch the data from the database table
-con = st.connection("snowflake")        
-df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
+#con = st.connection("snowflake")        
+
 tab2.table(df)
 
 # if submit:
