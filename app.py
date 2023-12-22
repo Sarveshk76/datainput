@@ -64,3 +64,13 @@ tab2.table(df)
 #     st.write("ProjectDescription",type(projectdescription))
 #     st.write("Comment",type(comment))
 #     st.write("NewPriceRequestedBySupplier",type(NewPriceRequestedbysupplier_basisforcostavoidance))
+
+# [connections.snowflake]
+# account = "hyocgxp-kx57838"
+# user = "SARVESHK76"
+# password = "Ml762046"
+# role = "ACCOUNTADMIN"
+# warehouse = "DEMO_WAREHOUSE"
+# database = "DEMO"
+# schema = "PUBLIC"
+# client_session_keep_alive = true
