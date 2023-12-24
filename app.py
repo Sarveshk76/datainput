@@ -101,11 +101,11 @@ if authentication_status == True:
     #     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     #     return dfc.to_csv(index=False).encode('utf-8')
 
-    col1, col2 = st.columns(2)
-    with col1:
-        reload = st.button("reload",type="primary")
-        if reload:
-            df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     reload = st.button("reload",type="primary")
+    #     if reload:
+    #         df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
     #with col2:
         # csv = convert_to_csv(df)
         # st.button(
