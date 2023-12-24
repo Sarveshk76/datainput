@@ -1,69 +1,127 @@
 import streamlit as st
 import pandas as pd
+import streamlit_authenticator as stauth
+import yaml
+from yaml.loader import SafeLoader
+
+
+with open('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
 
 con = st.connection("snowflake")
 
 st.title("PoCDataInput")
 
-tab1, tab2 = st.tabs(["Form", "DB Connection"])
+authenticator = stauth.Authenticate(config['credentials'], config['cookie']['name'],config['cookie']['key'],  config['cookie']['expiry_days'])
 
-materialcode = tab1.text_input("MaterialCode")
-projectcategory = tab1.selectbox(
-    'ProjectCategory',
-    ("Select",)+('savings', 'costup', 'costavoidance','noinitiative'))
+# hashed_passwords = stauth.Hasher(["password1", "password2"]).generate()
+# print(hashed_passwords)
 
-subcategory_dict = {"savings": ["PN_price_negotiation","BulkManufacturing"], 
-               "costup":["PN_price_negotiation"],
-               "noinitiative":["noinitiative"],
-               "costavoidance":["PN_price_negotiation"]}
-
-if projectcategory:
-    if projectcategory == "savings":
-        subcategory = tab1.selectbox('subcategory',["Select"] + subcategory_dict["savings"])
-    if projectcategory == "costup":
-        subcategory = tab1.selectbox('subcategory',["Select"] + subcategory_dict["costup"])        
-    if projectcategory == "noinitiative":
-        subcategory = tab1.selectbox('subcategory',["Select"] + subcategory_dict["noinitiative"])
-    if projectcategory == "costavoidance":
-        subcategory = tab1.selectbox('subcategory',["Select"] + subcategory_dict["costavoidance"])
-print(projectcategory)
+name, authentication_status, username = authenticator.login("Login", "main")
 
 
-projectdescription = tab1.text_area("projectdescription","It Cannot Be Blank")
+if authentication_status == True:
+    # logout button
+    with st.sidebar:
+        st.markdown(
+    f'''
+        <style>
+            .sidebar .sidebar-content {{
+                width: 500px;
+            }}
+        </style>
+    ''',
+    unsafe_allow_html=True
+)
+        st.subheader(f"Welcome, {name}")
+        authenticator.logout("Logout", "sidebar")
+        
 
-if len(projectdescription) == 0:
-     tab1.error("Please enter description. It cannot be blank")
-else:
-    if len(projectdescription) <10:
-        tab1.error("Please describe in detail")
-comment = tab1.text_area("Please provide additional comments if any")       
-NewPriceRequestedbysupplier_basisforcostavoidance = tab1.number_input("NewPriceRequestedBySupplier",min_value = 0.00,max_value=10000.00)
+        materialcode = st.text_input("MaterialCode", key="materialcode")
+        if len(list(materialcode))>0:
+            if materialcode.isdigit() == False:
+                st.error("Please enter only digits")
+            df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL WHERE MATERIALCODE LIKE '"+materialcode+"%'").fetchall()
+            if len(df) > 0:
+                st.table(df)
+            
+        projectcategory = st.selectbox(
+            'ProjectCategory',
+            ("Select",)+('savings', 'costup', 'costavoidance','noinitiative'), key="projectcategory")
 
-submit = tab1.button("submitbutton",type="primary")
+        subcategory_dict = {"savings": ["PN_price_negotiation","BulkManufacturing"], 
+                    "costup":["PN_price_negotiation"],
+                    "noinitiative":["noinitiative"],
+                    "costavoidance":["PN_price_negotiation"]}
+        
+        subcategory = None
 
-# if submit:
-#     con.query(f"INSERT INTO APPTBL(MaterialCode ,ProjectCategory,SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values ({materialcode},{projectcategory},{subcategory},{projectdescription},{comment},{NewPriceRequestedbysupplier_basisforcostavoidance})")
-# df = con.query("select * from APPTBL", ttl=60)
-# tab2.table(df)
-df = pd.DataFrame({})
-df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
+        if projectcategory:
+            if projectcategory == "savings":
+                subcategory = st.selectbox('subcategory',["Select"] + subcategory_dict["savings"])
+            if projectcategory == "costup":
+                subcategory = st.selectbox('subcategory',["Select"] + subcategory_dict["costup"])
+            if projectcategory == "noinitiative":
+                subcategory = st.selectbox('subcategory',["Select"] + subcategory_dict["noinitiative"])
+            if projectcategory == "costavoidance":
+                subcategory = st.selectbox('subcategory',["Select"] + subcategory_dict["costavoidance"])
 
-if submit:
-    with con.cursor() as cur:
-        cur.execute("INSERT INTO APPTBL(MaterialCode ,ProjectCategory, SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values"+f"({materialcode},'{projectcategory}','{subcategory}','{projectdescription}','{comment}',{NewPriceRequestedbysupplier_basisforcostavoidance})")
-        df = con.query("SELECT * from TEST1DB.PUBLIC.APPTBL", ttl=60)
-# Fetch the data from the database table
-#con = st.connection("snowflake")        
+        projectdescription = st.text_area("projectdescription","It Cannot Be Blank", key="projectdescription")
 
-tab2.table(df)
+        if len(list(projectdescription)) == 0:
+            st.error("Please enter description. It cannot be blank")
+        else:
+            if len(list(projectdescription)) <10:
+                st.error("Please describe in detail")
+        comment = st.text_area("Please provide additional comments if any", key="comment")
 
-# if submit:
-#     st.write("MaterialCode",type(materialcode))
-#     st.write("ProjectCategory",type(projectcategory))
-#     st.write("SubCategory",type(subcategory))
-#     st.write("ProjectDescription",type(projectdescription))
-#     st.write("Comment",type(comment))
-#     st.write("NewPriceRequestedBySupplier",type(NewPriceRequestedbysupplier_basisforcostavoidance))
+        npr = st.number_input("NewPriceRequestedBySupplier",min_value = 0.00,max_value=10000.00,step=0.01,format="%.2f", key="npr")
+
+        def clear_fields():
+            with con.cursor() as cur:
+                cur.execute("INSERT INTO APPTBL(MaterialCode ,ProjectCategory, SubCategory, ProjectDescription ,AdditionalComment ,NewPriceRequestedBySupplier) values"+f"({materialcode},'{projectcategory}','{subcategory}','{projectdescription}','{comment}',{npr})")
+            st.success("Data inserted successfully")
+            df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
+
+            st.session_state.materialcode = ""
+            st.session_state.projectcategory = "Select"
+            st.session_state.projectdescription = ""
+            st.session_state.comment = ""
+            st.session_state.npr = 0.00
+
+        submit = st.button("submitbutton",type="primary", on_click=clear_fields)
+
+        df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
+        #df = con.query("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
+
+    # @st.cache_data()
+    # def convert_to_csv(df):
+    #     dfc = df.fetchall()
+    #     dfc.columns = list(df.columns)
+    #     # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    #     return dfc.to_csv(index=False).encode('utf-8')
+
+    col1, col2 = st.columns(2)
+    with col1:
+        reload = st.button("reload",type="primary")
+        if reload:
+            df = con.cursor().execute("SELECT * FROM TEST1DB.PUBLIC.APPTBL")
+    #with col2:
+        # csv = convert_to_csv(df)
+        # st.button(
+        #     label="Download data as CSV",
+        #     # data=csv,
+        #     # file_name='data.csv',
+        #     # mime='text/csv',
+        # )
+    st.table(df)
+
+if authentication_status == False:
+    st.error("Incorrect username/password")
+
+if authentication_status == None:
+    st.info("Please login")
+
 
 # [connections.snowflake]
 # account = "hyocgxp-kx57838"
